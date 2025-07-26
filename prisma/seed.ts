@@ -1,5 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import * as data from "../src/data/store_data.json";
+import { PrismaClient } from "@prisma/client";
+
 const prisma = new PrismaClient();
 
 async function seedData() {
@@ -25,10 +26,11 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
-    console.log(e);
-    process.exit(1);
+  .then(async () => {
+    await prisma.$disconnect();
   })
-  .finally(() => {
-    prisma.$disconnect();
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
   });
