@@ -2,7 +2,6 @@
 import Link from "next/link";
 
 import Script from "next/script";
-import stores from "@/data/store_data.json";
 import { Dispatch, SetStateAction } from "react";
 
 declare global {
