@@ -1,15 +1,19 @@
+import React, { useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { StoreApiResponse, StoreType } from "@/interface";
 import axios from "axios";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import Loading from "@/components/Loading";
 import { useRouter } from "next/router";
-import Pagination from "@/components/Pagination";
-import React from "react";
+import useIntersectionObserver from "@/hooks/useIntersectionObserver";
+import Loader from "@/components/Loader";
 
 export default function StoreListPage() {
   const router = useRouter();
-  const { page = "1" } = router.query as { page: string };
+  const { page = "1" }: any = router.query;
+  const ref = useRef<HTMLDivElement | null>(null);
+  const pageRef = useIntersectionObserver(ref, {});
+  const isPageEnd = !!pageRef?.isIntersecting;
 
   const fetchStores = async ({ pageParam = 1 }) => {
     const { data: stores } = await axios.get(`/api/stores`, {
@@ -32,11 +36,28 @@ export default function StoreListPage() {
   } = useInfiniteQuery({
     queryKey: ["stores"],
     queryFn: fetchStores,
-    getNextPageParam: (lastPage, pages) =>
-      lastPage.data.length > 0 ? (lastPage.page || 0) + 1 : undefined,
+    getNextPageParam: (lastPage: StoreApiResponse) =>
+      lastPage.data?.length > 0 ? (lastPage?.page || 0) + 1 : undefined,
     initialPageParam: 1,
   });
-  console.log(stores);
+
+  const fetchNext = async () => {
+    if (isPageEnd && hasNextPage) {
+      const result = await fetchNextPage();
+      if (result.isError) {
+        console.log(result.error);
+      }
+    }
+  };
+  useEffect(() => {
+    let timeId: NodeJS.Timeout | undefined;
+    if (isPageEnd && hasNextPage) {
+      timeId = setTimeout(() => {
+        fetchNext();
+      }, 10);
+    }
+    return () => clearTimeout(timeId);
+  }, [isPageEnd, hasNextPage, fetchNext]);
 
   if (isError) {
     return (
@@ -91,7 +112,8 @@ export default function StoreListPage() {
           ))
         )}
       </ul>
-      <button onClick={() => fetchNextPage()}>213</button>
+      {(hasNextPage || isFetchingNextPage || isFetching) && <Loader />}
+      <div className="w-full touch-none h-10 mb-10" ref={ref} />
     </div>
   );
 }
